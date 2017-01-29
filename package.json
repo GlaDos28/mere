@@ -1,0 +1,26 @@
+{
+  "name": "mere",
+  "version": "0.0.0",
+  "description": "Library that enables binding string-formed tasks to the code parts and their execution",
+  "main": "index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GlaDos28/mere.git"
+  },
+  "keywords": [
+    "mere",
+    "string-formed",
+    "task",
+    "binding",
+    "behavior"
+  ],
+  "author": "Evgeny Savelyev",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/GlaDos28/mere/issues"
+  },
+  "homepage": "https://github.com/GlaDos28/mere#readme"
+}
