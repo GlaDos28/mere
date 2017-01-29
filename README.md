@@ -47,6 +47,8 @@ require("mere");
 ##### Sum two numbers
 
 ```javascript
+require("mere");
+
 "sum".bind((num1, num2) => {
 	return num1 + num2;
 });
@@ -65,6 +67,8 @@ console.log("sum".make(2, 3));
 ##### Fibonacci
 
 ```javascript
+require("mere");
+
 "fib".bind((k) => {
 	if (k <= 2)
 		return 1;
