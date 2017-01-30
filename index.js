@@ -66,6 +66,22 @@ const ensureArgNum = (given, expected) => {
 		throw new Error(`too more arguments: given ${given}, expected ${expected}`);
 };
 
+const isTask = (obj) => {
+	if (!obj)
+		return false;
+
+	const task = obj.task;
+
+	return task && task.constructor && task.constructor.name === "MereTask";
+};
+
+const wrapInArr = (obj) => {
+	if (obj && obj.constructor && obj.constructor.name === "Array")
+		return obj;
+
+	return [obj];
+};
+
 //** task definition. Main logic part
 
 class MereTask {
@@ -226,6 +242,36 @@ Array.prototype.promise = function (...args) {
 		resolve();
 	});
 };
+
+Array.prototype.generate = function (passArgs) {
+	for (const task of this)
+		if (!isTask(task))
+			throw new Error("array must contain only tasks to call generate()")
+
+	const gen = (function *(arr) {
+		let res = undefined;
+
+		if (passArgs)
+			for (const task of arr)
+				res = res === undefined ? task.make(...wrapInArr(yield)) : task.make(res, ...wrapInArr(yield res));
+		else
+			for (const task of arr)
+				res = task.make(...wrapInArr(yield res));
+
+		return res;
+	})(this);
+
+	gen.next();
+
+	return gen;
+};
+
+"sum".bind((n1, n2) => n1 + n2);
+
+const gen = ["sum", "sum"].generate();
+
+console.log(gen.next(["sum".with(100, 400), 3]).value);
+console.log(gen.next([20, 30]).value);
 
 Array.prototype.with = function (...args) {
 	return getArrayTask(this, "with()").with(...args);

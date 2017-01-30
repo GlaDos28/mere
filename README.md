@@ -12,7 +12,7 @@ npm i mere --save
 ### Usage
 
 In our context tasks are mappings { string : function } or their derivatives.
-The world "derivative" means all task combinations that can be achived through using such methods as
+The world "derivative" means all task combinations that can be achived through using such methods as  
     "task".task  
     "task".with(...)  
     "task".then(...)  
@@ -93,6 +93,23 @@ That one is stupid, but You will do it better!
 
 /* and even task arrays in task arrays! */
 ["task name 1", ["task name 2"], "task name 3"].make();
+```
+
+##### Wrap task array in a generator
+
+```javascript
+/* each next(args) executes a task and returns a value */
+["task name 1", "task name 2", "task name 3"].generate(); /* equally: generate(false) */
+
+/* each next(args) executes a task with the first argument from the previous result
+ * and put given args starting from the second formal argument; returns a value.
+ * If previous result === undefined, the first argument will not be put this way. */ 
+["task name 1", "task name 2", "task name 3"].generate(true);
+
+/* works the same as */
+"task name 1".then("task name 2", args2).then("task name 3", args3).make(args1);
+/* and */
+["task name 1".with(args1), "task name 2".with(args2), "task name 3".make(args3)].make();
 ```
 
 ##### Memorization
@@ -224,6 +241,24 @@ require("mere");
 "mult".bind((num1, num2) => num1 * num2);
 
 console.log(["sum", "mult".with(2)].make(2, 2)); /* I hope You know that is eight */
+```
+
+##### Sum generators
+
+```javascript
+require("mere");
+
+"sum".bind((num1, num2) => num1 + num2);
+
+let gen = ["sum", "sum"].generate(); /* is equal to generate(false) */
+
+console.log(gen.next([2, 3]).value);   /* 5 */
+console.log(gen.next([20, 30]).value); /* 50 */
+
+gen = ["sum", "sum"].generate(true);
+
+console.log(gen.next([2, 3]).value); /* 5 */
+console.log(gen.next(20).value);   /* 25 */
 ```
 
 ##### Don't do this things
