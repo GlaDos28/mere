@@ -16,8 +16,15 @@ The world "derivative" means all task combinations that can be achived through u
     "task".task
     "task".with(...)
     "task".then(...)
+    [task1, task2, ...]
 
-##### Bind a function to the string-formed task
+##### Require Mere library
+
+```javascript
+require("mere");
+```
+
+##### Bind a function
 
 ```javascript
 "task name".bind((arg1, arg2, ...) => {
@@ -28,12 +35,6 @@ The world "derivative" means all task combinations that can be achived through u
 ```
 
 Also `.bind()` returns a string that was binded to the function.
-
-##### Require mere library
-
-```javascript
-require("mere");
-```
 
 ##### Execute a function
 
