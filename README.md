@@ -95,7 +95,7 @@ That one is stupid, but You will do it better!
 ["task name 1", ["task name 2"], "task name 3"].make();
 ```
 
-##### Wrap task array in a generator
+##### Wrap task array into a generator
 
 ```javascript
 /* each next(args) executes a task and returns a value */
@@ -112,14 +112,14 @@ That one is stupid, but You will do it better!
 ["task name 1".with(args1), "task name 2".with(args2), "task name 3".make(args3)].make();
 ```
 
-##### Memorization
+##### Memoization
 
 ```javascript
-task.memorize();
+task.memoize();
 ```
 
-Application will save the result for each argument combination. Note that responsibility of task memorization is laid on user.
-Excess arguments are removed when checking memorization data, as well as missing arguments are put undefined.
+Application will save the result for each argument combination. Note that responsibility of task memoization is laid on user.
+Excess arguments are removed when checking memoization data, as well as missing arguments are put undefined.
 
 ##### Additional options
 
@@ -173,7 +173,7 @@ console.log("sum".make(2, 3));
     });
 ```
 
-##### Fibonacci with memorization
+##### Fibonacci with memoization
 
 ```javascript
 require("mere");
@@ -185,7 +185,7 @@ require("mere");
 	return "fib".make(k - 1) + "fib".make(k - 2);
 });
 
-"fib".memorize();
+"fib".memoize();
 
 console.log("fib".make(50));
 ```

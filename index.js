@@ -150,7 +150,7 @@ class MereTask {
 		);
 	}
 
-	memorize () {
+	memoize () {
 		if (this.memo === null)
 			this.memo = {};
 	}
@@ -195,8 +195,8 @@ String.prototype.then = function (task, ...args) {
 	return taskModuleMap[this].then(task, ...args);
 };
 
-String.prototype.memorize = function () {
-	return taskModuleMap[this].memorize();
+String.prototype.memoize = function () {
+	return taskModuleMap[this].memoize();
 };
 
 //** array prototype
@@ -266,13 +266,6 @@ Array.prototype.generate = function (passArgs) {
 	return gen;
 };
 
-"sum".bind((n1, n2) => n1 + n2);
-
-const gen = ["sum", "sum"].generate();
-
-console.log(gen.next(["sum".with(100, 400), 3]).value);
-console.log(gen.next([20, 30]).value);
-
 Array.prototype.with = function (...args) {
 	return getArrayTask(this, "with()").with(...args);
 };
@@ -281,8 +274,8 @@ Array.prototype.then = function (task, ...args) {
 	return getArrayTask(this, "then()").then(task, ...args);
 };
 
-Array.prototype.memorize = function () {
-	return getArrayTask(this, "memorize()").memorize();
+Array.prototype.memoize = function () {
+	return getArrayTask(this, "memoize()").memoize();
 };
 
 /**
