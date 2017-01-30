@@ -276,5 +276,4 @@ Because of its inanity.
 
 ### Future releases
 
-- task array wrapping into a generator;
 - memorization control methods.
