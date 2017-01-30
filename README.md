@@ -36,13 +36,13 @@ require("mere");
 
 Also `.bind()` returns a string that was binded to the function.
 
-##### Execute a function
+##### Execute a task
 
 ```javascript
 const res = "task name".make(arg1, arg2, ...); /* may throw Errors! */
 ```
 
-##### Return a function wrapped in promise
+##### Return a task wrapped in promise
 
 ```javascript
 const promise = "task name".promise(arg1, arg2, ...); /* errors will call the promise's reject branch! */
@@ -187,9 +187,9 @@ console.log("double".make(2));
 ```
 
 ##### Faggot thrower
-require("mere");
 
 ```javascript
+require("mere");
 
 "print".bind((msg) => {
 	console.log(msg);
