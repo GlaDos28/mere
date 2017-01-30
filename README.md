@@ -13,10 +13,10 @@ npm i mere --save
 
 In our context tasks are mappings { string : function } or their derivatives.
 The world "derivative" means all task combinations that can be achived through using such methods as
-    "task".task
-    "task".with(...)
-    "task".then(...)
-    [task1, task2, ...]
+    "task".task  
+    "task".with(...)  
+    "task".then(...)  
+    [task1, task2, ...]  
 
 ##### Require Mere library
 
@@ -95,6 +95,15 @@ That one is stupid, but You will do it better!
 ["task name 1", ["task name 2"], "task name 3"].make();
 ```
 
+##### Memorization
+
+```javascript
+task.memorize();
+```
+
+Application will save the result for each argument combination. Note that responsibility of task memorization is laid on user.
+Excess arguments are removed when checking memorization data, as well as missing arguments are put undefined.
+
 ##### Additional options
 
 ```javascript
@@ -147,7 +156,7 @@ console.log("sum".make(2, 3));
     });
 ```
 
-##### Fibonacci
+##### Fibonacci with memorization
 
 ```javascript
 require("mere");
@@ -159,7 +168,9 @@ require("mere");
 	return "fib".make(k - 1) + "fib".make(k - 2);
 });
 
-console.log("fib".make(5));
+"fib".memorize();
+
+console.log("fib".make(50));
 ```
 
 ##### Sum and call
@@ -230,4 +241,5 @@ Because of its inanity.
 
 ### Future releases
 
-- optional functions' memoization.
+- task array wrapping into a generator;
+- memorization control methods.

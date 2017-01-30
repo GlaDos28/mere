@@ -29,20 +29,34 @@ const ARG_CHECK_ENUM = {
 
 //** utility functions
 
-const execFunc = (func, ...args) => {
-	const trueArgs = [];
+const execFunc = (task, ...args) => {
+	const
+		trueArgs = [],
+		argLimit = Math.min(args.length, task.argNum);
 
-	for (let i = 0; i < args.length; i += 1)
+	for (let i = 0; i < argLimit; i += 1)
 		if (args[i] && args[i].constructor && args[i].constructor.name === "MereTask")
 			trueArgs.push(args[i].make());
 		else
 			trueArgs.push(args[i]);
 
-	return typeof func === "function" ? func(...trueArgs) : func.func(...trueArgs);
-};
+	for (let i = argLimit; i < task.argNum; i += 1)
+		trueArgs.push(undefined);
 
-const getFAN = (func) => /* get formal argument number */
-	typeof func === "function" ? func.length : func.mereFAN;
+	if (task.memo !== null) {
+		const argsKey = JSON.stringify(trueArgs); /* => memoization works with serializable arguments only */
+
+		if (task.memo[argsKey] !== undefined)
+			return task.memo[argsKey];
+
+		const res = task.func(...trueArgs);
+
+		task.memo[argsKey] = res;
+		return res;
+	}
+
+	return task.func(...trueArgs);
+};
 
 const ensureArgNum = (given, expected) => {
 	if (!config.lessArgAllowed && given < expected)
@@ -52,32 +66,34 @@ const ensureArgNum = (given, expected) => {
 		throw new Error(`too more arguments: given ${given}, expected ${expected}`);
 };
 
-//**
+//** task definition. Main logic part
 
 class MereTask {
-	constructor (func) {
-		this.task = this;
-		this.func = func;
+	constructor (func, argNum) {
+		this.task   = this;
+		this.func   = func;
+		this.argNum = argNum || func.length;
+		this.memo   = null; /* null means no memo (by default) */
 	}
 
 	make (...args) {
-		if (typeof this.func !== "function" && (!this.func || typeof this.func.mereFAN !== "number"))
+		if (typeof this.func !== "function")
 			throw new Error(`task ${this} is not binded to the function`);
 
-		ensureArgNum(args.length, getFAN(this.func));
+		ensureArgNum(args.length, this.argNum);
 
-		return execFunc(this.func, ...args);
+		return execFunc(this, ...args);
 	}
 
 	promise (...args) {
-		if (typeof this.func !== "function" && (!this.func || typeof this.func.mereFAN !== "number"))
+		if (typeof this.func !== "function")
 			throw new Error(`task ${this} is not binded to the function`);
 
-		ensureArgNum(args.length, getFAN(this.func));
+		ensureArgNum(args.length, this.argNum);
 
 		return new Promise((resolve, reject) => {
 			try {
-				resolve(execFunc(this.func, ...args));
+				resolve(execFunc(this, ...args));
 			} catch (err) {
 				reject(err);
 			}
@@ -85,44 +101,48 @@ class MereTask {
 	}
 
 	with (...args) {
-		const formalArgNum = getFAN(this.func);
+		const formalArgNum = this.argNum;
 
 		if (!config.moreArgAllowed && args.length > formalArgNum)
 			throw new Error(`too more arguments: given ${args.length}, expected ${formalArgNum}`);
 
-		return new MereTask({
-			mereFAN : formalArgNum - args.length,
-			func : (...lastArgs) => {
-				return execFunc(this.func, ...args, ...lastArgs);
-			}
-		});
+		return new MereTask((...lastArgs) =>
+			execFunc(this, ...args, ...lastArgs),
+			formalArgNum - args.length
+		);
 	}
 
 	then (task, ...secondArgs) {
-		if (typeof task === "string")
-			task = task.task;
-
-		if (task && task.constructor && task.constructor.name === "Array")
-			task = getArrayTask(task);
-
-		if (!task || !task.constructor || task.constructor.name !== "MereTask")
+		if (!task)
 			throw new Error(`task expected, got ${task}`);
 
-		ensureArgNum(secondArgs.length, getFAN(task.func));
+		const trueTask = task.task;
 
-		return new MereTask({
-			mereFAN : getFAN(this.func), /* to save the formal argument number */
-			func    : (...args) => {
-				const firstRes = execFunc(this.func, ...args);
+		if (!trueTask)
+			throw new Error(`task expected, got ${trueTask}`);
 
-				if (firstRes === undefined)
-					return execFunc(task.func, ...secondArgs);
+		ensureArgNum(secondArgs.length, trueTask.argNum);
 
-				return execFunc(task.func, firstRes, ...secondArgs);
-			}
-		});
+		return new MereTask((...args) => {
+			const firstRes = execFunc(this, ...args);
+
+			return firstRes === undefined
+				? execFunc(trueTask, ...secondArgs)
+				: execFunc(trueTask, firstRes, ...secondArgs);
+		},
+			this.argNum
+		);
+	}
+
+	memorize () {
+		if (this.memo === null)
+			this.memo = {};
 	}
 }
+
+/* eslint-disable no-extend-native */
+
+//** string prototype
 
 String.prototype.bind = function (func) {
 	if (func && func.constructor) {
@@ -159,7 +179,11 @@ String.prototype.then = function (task, ...args) {
 	return taskModuleMap[this].then(task, ...args);
 };
 
-//** arrays
+String.prototype.memorize = function () {
+	return taskModuleMap[this].memorize();
+};
+
+//** array prototype
 
 const getArrayTask = (arr, errFuncName) => {
 	if (arr.length === 0)
@@ -189,7 +213,9 @@ Array.prototype.__defineGetter__("task", function () {
 
 Array.prototype.make = function (...args) {
 	if (this.length !== 0)
-		return getArrayTask(this, "make()").promise(...args);
+		return getArrayTask(this, "make()").make(...args);
+
+	return undefined;
 };
 
 Array.prototype.promise = function (...args) {
@@ -207,6 +233,10 @@ Array.prototype.with = function (...args) {
 
 Array.prototype.then = function (task, ...args) {
 	return getArrayTask(this, "then()").then(task, ...args);
+};
+
+Array.prototype.memorize = function () {
+	return getArrayTask(this, "memorize()").memorize();
 };
 
 /**
@@ -230,13 +260,13 @@ exports = module.exports = {
 		return ARG_CHECK_ENUM.MUST_EQUAL;
 	},
 	setArgCheck    : (type) => {
-		if (type > 3)
+		if (type > ARG_CHECK_ENUM.MUST_EQUAL)
 			throw new Error(`invalid argument checking type: ${type} (use mere.ARG_CHECK_ENUM)`);
 
-		if (type < 2)
+		if (type < ARG_CHECK_ENUM.NOT_LESS)
 			config.lessArgAllowed = true;
 
-		if (type === 0)
+		if (type === ARG_CHECK_ENUM.NO_CHECK)
 			config.moreArgAllowed = true;
 	}
 };
