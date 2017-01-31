@@ -153,6 +153,8 @@ class MereTask {
 	memoize () {
 		if (this.memo === null)
 			this.memo = {};
+
+		return this;
 	}
 }
 
@@ -243,10 +245,10 @@ Array.prototype.promise = function (...args) {
 	});
 };
 
-Array.prototype.generate = function (passArgs) {
+Array.prototype.generate = function (passArgs = false) {
 	for (const task of this)
 		if (!isTask(task))
-			throw new Error("array must contain only tasks to call generate()")
+			throw new Error("array must contain only tasks to call generate()");
 
 	const gen = (function *(arr) {
 		let res = undefined;
