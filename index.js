@@ -348,14 +348,3 @@ exports = module.exports = {
 		config.makeReturnPromiseAllowed = option;
 	}
 };
-
-"print".bind((msg) => {
-	console.log(msg);
-});
-
-"test2".bind(() =>
-	new Promise((resolve, reject) => {
-		resolve(-1);
-	}));
-
-"test2".then("print").make();
