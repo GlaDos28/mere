@@ -16,8 +16,9 @@ const taskModuleMap = {};
  * Library configuration.
  */
 const config = {
-	lessArgAllowed : true,
-	moreArgAllowed : false
+	lessArgAllowed           : true,
+	moreArgAllowed           : false,
+	makeReturnPromiseAllowed : true
 };
 
 const ARG_CHECK_ENUM = {
@@ -98,7 +99,12 @@ class MereTask {
 
 		ensureArgNum(args.length, this.argNum);
 
-		return execFunc(this, ...args);
+		const res = execFunc(this, ...args);
+
+		if (!config.makeReturnPromiseAllowed && res instanceof Promise)
+			throw new Error("make() should not return a promise");
+
+		return res;
 	}
 
 	promise (...args) {
@@ -284,11 +290,11 @@ Array.prototype.memoize = function () {
  * Exports.
  */
 exports = module.exports = {
-	NO_CHECK       : ARG_CHECK_ENUM.NO_CHECK,
-	NOT_MORE       : ARG_CHECK_ENUM.NOT_MORE,
-	NOT_LESS       : ARG_CHECK_ENUM.NOT_LESS,
-	MUST_EQUAL     : ARG_CHECK_ENUM.MUST_EQUAL,
-	getArgCheck    : () => {
+	NO_CHECK                    : ARG_CHECK_ENUM.NO_CHECK,
+	NOT_MORE                    : ARG_CHECK_ENUM.NOT_MORE,
+	NOT_LESS                    : ARG_CHECK_ENUM.NOT_LESS,
+	MUST_EQUAL                  : ARG_CHECK_ENUM.MUST_EQUAL,
+	getArgCheck                 : () => {
 		if (config.lessArgAllowed && config.moreArgAllowed)
 			return ARG_CHECK_ENUM.NO_CHECK;
 
@@ -300,7 +306,7 @@ exports = module.exports = {
 
 		return ARG_CHECK_ENUM.MUST_EQUAL;
 	},
-	setArgCheck    : (type) => {
+	setArgCheck                 : (type) => {
 		if (type > ARG_CHECK_ENUM.MUST_EQUAL)
 			throw new Error(`invalid argument checking type: ${type} (use mere.ARG_CHECK_ENUM)`);
 
@@ -309,5 +315,9 @@ exports = module.exports = {
 
 		if (type === ARG_CHECK_ENUM.NO_CHECK)
 			config.moreArgAllowed = true;
+	},
+	isMakeReturnPromiseAllowed  : () => config.makeReturnPromiseAllowed,
+	setMakeReturnPromiseAllowed : (option) => {
+		config.makeReturnPromiseAllowed = option;
 	}
 };
