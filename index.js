@@ -284,8 +284,8 @@ Array.prototype.generate = function (passArgs = false) {
 							},
 							(err) => {
 								reject(err);
-							})
-					};
+							});
+					});
 				else
 					res = task.make(res, ...wrapInArr(yield res));
 			}
