@@ -83,6 +83,13 @@ const wrapInArr = (obj) => {
 	return [obj];
 };
 
+const isPromise = (obj) =>
+	obj                              &&
+		obj.then instanceof Function &&
+		!(obj instanceof Array)      &&
+		!(obj instanceof String)     &&
+		!(obj instanceof MereTask);
+
 //** task definition. Main logic part
 
 class MereTask {
@@ -148,7 +155,7 @@ class MereTask {
 		return new MereTask((...args) => {
 			const firstRes = execFunc(this, ...args);
 
-			if (firstRes instanceof Promise)
+			if (isPromise(firstRes))
 				return new Promise((resolve, reject) =>
 					firstRes.then(
 						(firstTrueRes) => {
@@ -276,7 +283,7 @@ Array.prototype.generate = function (passArgs = false) {
 			for (const task of arr) {
 				if (res === undefined)
 					res = task.make(...wrapInArr(yield));
-				else if (res instanceof Promise)
+				else if (isPromise(res))
 					res = new Promise((resolve, reject) => {
 						res.then(
 							(trueRes) => {
