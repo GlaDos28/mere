@@ -1,6 +1,6 @@
 {
   "name": "mere",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "description": "Library that enables binding string-formed tasks to functions and using cool associated tools",
   "main": "index.js",
   "scripts": {
