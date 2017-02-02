@@ -64,7 +64,7 @@ const ensureArgNum = (given, expected) => {
 		throw new Error(`too few arguments: given ${given}, expected ${expected}`);
 
 	if (!config.moreArgAllowed && given > expected)
-		throw new Error(`too more arguments: given ${given}, expected ${expected}`);
+		throw new Error(`too many arguments: given ${given}, expected ${expected}`);
 };
 
 const isTask = (obj) => {
@@ -133,7 +133,7 @@ class MereTask {
 		const formalArgNum = this.argNum;
 
 		if (!config.moreArgAllowed && args.length > formalArgNum)
-			throw new Error(`too more arguments: given ${args.length}, expected ${formalArgNum}`);
+			throw new Error(`too many arguments: given ${args.length}, expected ${formalArgNum}`);
 
 		return new MereTask((...lastArgs) =>
 			execFunc(this, ...args, ...lastArgs),
