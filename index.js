@@ -148,6 +148,19 @@ class MereTask {
 		return new MereTask((...args) => {
 			const firstRes = execFunc(this, ...args);
 
+			if (firstRes instanceof Promise)
+				return new Promise((resolve, reject) =>
+					firstRes.then(
+						(firstTrueRes) => {
+							resolve(firstTrueRes === undefined
+								? execFunc(trueTask, ...secondArgs)
+								: execFunc(trueTask, firstTrueRes, ...secondArgs));
+						},
+						(err) => {
+							reject(err);
+						}
+					));
+
 			return firstRes === undefined
 				? execFunc(trueTask, ...secondArgs)
 				: execFunc(trueTask, firstRes, ...secondArgs);
@@ -260,8 +273,22 @@ Array.prototype.generate = function (passArgs = false) {
 		let res = undefined;
 
 		if (passArgs)
-			for (const task of arr)
-				res = res === undefined ? task.make(...wrapInArr(yield)) : task.make(res, ...wrapInArr(yield res));
+			for (const task of arr) {
+				if (res === undefined)
+					res = task.make(...wrapInArr(yield));
+				else if (res instanceof Promise)
+					res = new Promise((resolve, reject) => {
+						res.then(
+							(trueRes) => {
+								resolve(trueRes);
+							},
+							(err) => {
+								reject(err);
+							})
+					};
+				else
+					res = task.make(res, ...wrapInArr(yield res));
+			}
 		else
 			for (const task of arr)
 				res = task.make(...wrapInArr(yield res));
@@ -321,3 +348,14 @@ exports = module.exports = {
 		config.makeReturnPromiseAllowed = option;
 	}
 };
+
+"print".bind((msg) => {
+	console.log(msg);
+});
+
+"test2".bind(() =>
+	new Promise((resolve, reject) => {
+		resolve(-1);
+	}));
+
+"test2".then("print").make();
