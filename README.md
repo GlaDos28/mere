@@ -62,6 +62,32 @@ const newTask = "first task name".then("second task name", arg1_or_2, arg2_or_3,
 
 i.e `newTask` takes arguments for the first task and after takes the result (if exist) and args in `.then()` for the second task.
 
+##### Put arguments as a dictionary
+
+```javascript
+"task name".bind((arg1, ..., argn) => {...});
+
+"task name".make({
+	arg1 : ...,
+	...
+	argn : ...
+});
+
+/* and even this way */
+
+"task name"
+    .with({
+    	arg1 : ...,
+    	arg3 : ...
+    })
+    .with({
+    	arg2 : ...,
+        arg4 : ...
+    }),
+    ...
+    .make();
+```
+
 ##### Put one task as the argument for another one
 
 ```javascript
@@ -112,6 +138,13 @@ That one is stupid, but You will do it better!
 ["task name 1".with(args1), "task name 2".with(args2), "task name 3".make(args3)].make();
 ```
 
+##### Force return Promise from make()
+
+```javascript
+"task name".makeAnyway(args); /* can return both Promise or not Promise  */
+"task name".make(args); /* can return non-Promise values and Promises but when Mere configuration accepts  */
+```
+
 ##### Memoization
 
 ```javascript
@@ -128,17 +161,23 @@ const mere = require("mere");
 
 console.log(mere.getArgCheck()); /* return 1 === mere.NOT_MORE */
 
-/* if argument number must equal with the formal argument number (or an Error occured) */
+/* if argument number must equal with the formal argument number (or an Error occurred) */
 mere.setArgCheck(mere.MUST_EQUAL);
 
-/* if argument number must not be more than the formal argument number (or an Error occured) */
+/* if argument number must not be more than the formal argument number (or an Error occurred) */
 mere.setArgCheck(mere.NOT_MORE); /* the default setting */
 
-/* if argument number must not be less than the formal argument number (or an Error occured) */
+/* if argument number must not be less than the formal argument number (or an Error occurred) */
 mere.setArgCheck(mere.NOT_LESS);
 
 /* if We don't want to think about argument number mismatch */
 mere.setArgCheck(mere.NO_CHECK);
+
+/* if we want to throw Error when make() attempts to return a Promise  */
+mere.setMakeReturnPromiseAllowed(true); /* the default setting is false */
+
+/* clear all string bindings */
+mere.clearTasks();
 ```
 
 ### Examples
@@ -259,6 +298,72 @@ gen = ["sum", "sum"].generate(true);
 
 console.log(gen.next([2, 3]).value); /* 5 */
 console.log(gen.next(20).value);   /* 25 */
+```
+
+##### Printing five messages with partial argument filling
+
+```javascript
+require("mere");
+
+"print 5 messages".bind((m1, m2, m3, m4, m5) => {
+	console.log(m1);
+	console.log(m2);
+	console.log(m3);
+	console.log(m4);
+	console.log(m5);
+});
+
+"print 5 messages"
+    .with({
+    	m1 : "Hello,",
+    	m4 : "five",
+    	m3 : "is"
+    })
+    .with({ m5 : "lines" })
+    .make({ m2 : "this" });
+```
+
+##### Infinity adder
+
+```javascript
+require("mere");
+
+"adder".bind((...summands) => {
+	let res = 0;
+	
+	for (let i = 0; i < summands.length; i += 1)
+		res += summands[i];
+	
+	return res;
+});
+
+let task = "adder";
+
+for (let i = 0; i < 1000; i += 1)
+	task = task.with(i); /* or task = task.with({ summands : [i] }); */
+
+console.log(task.make());
+```
+
+##### Force a promise return
+
+```javascript
+require("mere");
+
+"promisify".bind((func, ...args) =>
+    new Promise((resolve, reject) => {
+	    try {
+	    	resolve(func(...args));
+	    } catch (err) {
+	    	reject(err);
+	    }
+    }));
+
+"promisify".makeAnyway((num1, num2) => num1 + num2, 2, 2).then(
+	(res) => {
+		console.log(res);
+	}
+);
 ```
 
 ##### Don't do this things

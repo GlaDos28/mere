@@ -8,181 +8,19 @@
 "use strict";
 
 /**
- * Map {string} task : {function} module.
+ * Imports.
  */
-const taskModuleMap = {};
+const
+	MereTask              = require("./src/MereTask"),
+	isPromise             = require("./src/util/isPromise"),
+	isTask                = require("./src/util/isTask"),
+	wrapInArr             = require("./src/util/wrapInArr"),
+	config                = require("./src/configuration");
 
 /**
- * Library configuration.
+ * Map {string} task : {function} module.
  */
-const config = {
-	lessArgAllowed           : true,
-	moreArgAllowed           : false,
-	makeReturnPromiseAllowed : true
-};
-
-const ARG_CHECK_ENUM = {
-	NO_CHECK   : 0,
-	NOT_MORE   : 1,
-	NOT_LESS   : 2,
-	MUST_EQUAL : 3
-};
-
-//** utility functions
-
-const execFunc = (task, ...args) => {
-	const
-		trueArgs = [],
-		argLimit = Math.min(args.length, task.argNum);
-
-	for (let i = 0; i < argLimit; i += 1)
-		if (args[i] && args[i].constructor && args[i].constructor.name === "MereTask")
-			trueArgs.push(args[i].make());
-		else
-			trueArgs.push(args[i]);
-
-	for (let i = argLimit; i < task.argNum; i += 1)
-		trueArgs.push(undefined);
-
-	if (task.memo !== null) {
-		const argsKey = JSON.stringify(trueArgs); /* => memoization works with serializable arguments only */
-
-		if (task.memo[argsKey] !== undefined)
-			return task.memo[argsKey];
-
-		const res = task.func(...trueArgs);
-
-		task.memo[argsKey] = res;
-		return res;
-	}
-
-	return task.func(...trueArgs);
-};
-
-const ensureArgNum = (given, expected) => {
-	if (!config.lessArgAllowed && given < expected)
-		throw new Error(`too few arguments: given ${given}, expected ${expected}`);
-
-	if (!config.moreArgAllowed && given > expected)
-		throw new Error(`too many arguments: given ${given}, expected ${expected}`);
-};
-
-const isTask = (obj) => {
-	if (!obj)
-		return false;
-
-	const task = obj.task;
-
-	return task && task.constructor && task.constructor.name === "MereTask";
-};
-
-const wrapInArr = (obj) => {
-	if (obj && obj.constructor && obj.constructor.name === "Array")
-		return obj;
-
-	return [obj];
-};
-
-const isPromise = (obj) =>
-	obj                              &&
-		obj.then instanceof Function &&
-		!(obj instanceof Array)      &&
-		!(obj instanceof String)     &&
-		!(obj instanceof MereTask);
-
-//** task definition. Main logic part
-
-class MereTask {
-	constructor (func, argNum) {
-		this.task   = this;
-		this.func   = func;
-		this.argNum = argNum || func.length;
-		this.memo   = null; /* null means no memo (by default) */
-	}
-
-	make (...args) {
-		if (typeof this.func !== "function")
-			throw new Error(`task ${this} is not binded to the function`);
-
-		ensureArgNum(args.length, this.argNum);
-
-		const res = execFunc(this, ...args);
-
-		if (!config.makeReturnPromiseAllowed && res instanceof Promise)
-			throw new Error("make() should not return a promise");
-
-		return res;
-	}
-
-	promise (...args) {
-		if (typeof this.func !== "function")
-			throw new Error(`task ${this} is not binded to the function`);
-
-		ensureArgNum(args.length, this.argNum);
-
-		return new Promise((resolve, reject) => {
-			try {
-				resolve(execFunc(this, ...args));
-			} catch (err) {
-				reject(err);
-			}
-		});
-	}
-
-	with (...args) {
-		const formalArgNum = this.argNum;
-
-		if (!config.moreArgAllowed && args.length > formalArgNum)
-			throw new Error(`too many arguments: given ${args.length}, expected ${formalArgNum}`);
-
-		return new MereTask((...lastArgs) =>
-			execFunc(this, ...args, ...lastArgs),
-			formalArgNum - args.length
-		);
-	}
-
-	then (task, ...secondArgs) {
-		if (!task)
-			throw new Error(`task expected, got ${task}`);
-
-		const trueTask = task.task;
-
-		if (!trueTask)
-			throw new Error(`task expected, got ${trueTask}`);
-
-		ensureArgNum(secondArgs.length, trueTask.argNum);
-
-		return new MereTask((...args) => {
-			const firstRes = execFunc(this, ...args);
-
-			if (isPromise(firstRes))
-				return new Promise((resolve, reject) =>
-					firstRes.then(
-						(firstTrueRes) => {
-							resolve(firstTrueRes === undefined
-								? execFunc(trueTask, ...secondArgs)
-								: execFunc(trueTask, firstTrueRes, ...secondArgs));
-						},
-						(err) => {
-							reject(err);
-						}
-					));
-
-			return firstRes === undefined
-				? execFunc(trueTask, ...secondArgs)
-				: execFunc(trueTask, firstRes, ...secondArgs);
-		},
-			this.argNum
-		);
-	}
-
-	memoize () {
-		if (this.memo === null)
-			this.memo = {};
-
-		return this;
-	}
-}
+let taskModuleMap = {};
 
 /* eslint-disable no-extend-native */
 
@@ -209,6 +47,10 @@ String.prototype.__defineGetter__("task", function () {
 
 String.prototype.make = function (...args) {
 	return taskModuleMap[this].make(...args);
+};
+
+String.prototype.makeAnyway = function (...args) {
+	return taskModuleMap[this].makeAnyway(...args);
 };
 
 String.prototype.promise = function (...args) {
@@ -262,6 +104,13 @@ Array.prototype.make = function (...args) {
 	return undefined;
 };
 
+Array.prototype.makeAnyway = function (...args) {
+	if (this.length !== 0)
+		return getArrayTask(this, "make()").makeAnyway(...args);
+
+	return undefined;
+};
+
 Array.prototype.promise = function (...args) {
 	if (this.length !== 0)
 		return getArrayTask(this, "promise()").promise(...args);
@@ -277,7 +126,12 @@ Array.prototype.generate = function (passArgs = false) {
 			throw new Error("array must contain only tasks to call generate()");
 
 	const gen = (function *(arr) {
+
+		/* eslint-disable no-undef-init */
+
 		let res = undefined;
+
+		/* eslint-enable no-undef-init */
 
 		if (passArgs)
 			for (const task of arr) {
@@ -294,14 +148,14 @@ Array.prototype.generate = function (passArgs = false) {
 							});
 					});
 				else
-					res = task.make(res, ...wrapInArr(yield res));
+					res = task.makeAnyway(res, ...wrapInArr(yield res));
 			}
 		else
 			for (const task of arr)
-				res = task.make(...wrapInArr(yield res));
+				res = task.makeAnyway(...wrapInArr(yield res));
 
 		return res;
-	})(this);
+	}(this));
 
 	gen.next();
 
@@ -312,7 +166,7 @@ Array.prototype.with = function (...args) {
 	return getArrayTask(this, "with()").with(...args);
 };
 
-Array.prototype.then = function (task, ...args) {
+Array.prototype.then_ = function (task, ...args) {
 	return getArrayTask(this, "then()").then(task, ...args);
 };
 
@@ -324,34 +178,13 @@ Array.prototype.memoize = function () {
  * Exports.
  */
 exports = module.exports = {
-	NO_CHECK                    : ARG_CHECK_ENUM.NO_CHECK,
-	NOT_MORE                    : ARG_CHECK_ENUM.NOT_MORE,
-	NOT_LESS                    : ARG_CHECK_ENUM.NOT_LESS,
-	MUST_EQUAL                  : ARG_CHECK_ENUM.MUST_EQUAL,
-	getArgCheck                 : () => {
-		if (config.lessArgAllowed && config.moreArgAllowed)
-			return ARG_CHECK_ENUM.NO_CHECK;
-
-		if (config.lessArgAllowed)
-			return ARG_CHECK_ENUM.NOT_MORE;
-
-		if (config.moreArgAllowed)
-			return ARG_CHECK_ENUM.NOT_LESS;
-
-		return ARG_CHECK_ENUM.MUST_EQUAL;
-	},
-	setArgCheck                 : (type) => {
-		if (type > ARG_CHECK_ENUM.MUST_EQUAL)
-			throw new Error(`invalid argument checking type: ${type} (use mere.ARG_CHECK_ENUM)`);
-
-		if (type < ARG_CHECK_ENUM.NOT_LESS)
-			config.lessArgAllowed = true;
-
-		if (type === ARG_CHECK_ENUM.NO_CHECK)
-			config.moreArgAllowed = true;
-	},
-	isMakeReturnPromiseAllowed  : () => config.makeReturnPromiseAllowed,
-	setMakeReturnPromiseAllowed : (option) => {
-		config.makeReturnPromiseAllowed = option;
+	NO_CHECK   : config.ARG_CHECK_ENUM.NO_CHECK,
+	NOT_MORE   : config.ARG_CHECK_ENUM.NOT_MORE,
+	NOT_LESS   : config.ARG_CHECK_ENUM.NOT_LESS,
+	MUST_EQUAL : config.ARG_CHECK_ENUM.MUST_EQUAL,
+	DEFAULT    : config.DEFAULT,
+	config     : config.config,
+	clearTasks : () => {
+		taskModuleMap = {};
 	}
 };

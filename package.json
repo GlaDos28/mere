@@ -4,7 +4,8 @@
   "description": "Library that enables binding string-formed tasks to functions and using cool associated tools",
   "main": "index.js",
   "scripts": {
-    "test": "node index.js"
+    "index": "node index.js",
+    "test": "mocha"
   },
   "repository": {
     "type": "git",
@@ -22,5 +23,10 @@
   "bugs": {
     "url": "https://github.com/GlaDos28/mere/issues"
   },
-  "homepage": "https://github.com/GlaDos28/mere#readme"
+  "homepage": "https://github.com/GlaDos28/mere#readme",
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "istanbul": "^0.4.5",
+    "mocha": "^3.2.0"
+  }
 }
