@@ -30,11 +30,12 @@ String.prototype.bind = function (func) {
 	if (func && func.constructor) {
 		if (func.constructor.name === "MereTask")
 			taskModuleMap[this] = func; /* func === task */
-
-		if (func.constructor.name === "Array")
+		else if (func.constructor.name === "Array")
 			taskModuleMap[this] = getArrayTask(func, "binding"); /* func === task array */
 		else if (typeof func === "function")
 			taskModuleMap[this] = new MereTask(func);
+		else
+			throw new Error("task must be binded to the function or to another task");
 	} else
 		throw new Error("task must be binded to the function or to another task");
 
@@ -43,6 +44,18 @@ String.prototype.bind = function (func) {
 
 String.prototype.__defineGetter__("task", function () {
 	return taskModuleMap[this];
+});
+
+String.prototype.__defineGetter__("frozenTask", function () {
+	return taskModuleMap[this].frozenTask;
+});
+
+String.prototype.__defineGetter__("promiseTask", function () {
+	return taskModuleMap[this].promiseTask;
+});
+
+String.prototype.__defineGetter__("deadTask", function () {
+	return taskModuleMap[this].deadTask;
 });
 
 String.prototype.make = function (...args) {
@@ -84,7 +97,9 @@ const getArrayTask = (arr, errFuncName) => {
 		throw new Error(`array must contain only tasks to call ${errFuncName}`);
 
 	for (let i = 1; i < arr.length; i += 1) {
-		if (typeof arr[i] !== "string" && (!arr[i] || !arr[i].constructor || arr[i].constructor.name !== "MereTask"))
+		const curTask = typeof arr[i] === "string" ? taskModuleMap[arr[i]] : arr[i];
+
+		if (!curTask || !curTask.constructor || curTask.constructor.name !== "MereTask")
 			throw new Error(`array must contain only tasks to call ${errFuncName}`);
 
 		finalTask = finalTask.then(arr[i]);
@@ -95,6 +110,18 @@ const getArrayTask = (arr, errFuncName) => {
 
 Array.prototype.__defineGetter__("task", function () {
 	return getArrayTask(this, "to the task property");
+});
+
+Array.prototype.__defineGetter__("frozenTask", function () {
+	return getArrayTask(this, "to the frozenTask property").frozenTask;
+});
+
+Array.prototype.__defineGetter__("promiseTask", function () {
+	return getArrayTask(this, "to the promiseTask property").promiseTask;
+});
+
+Array.prototype.__defineGetter__("deadTask", function () {
+	return getArrayTask(this, "to the deadTask property").deadTask;
 });
 
 Array.prototype.make = function (...args) {
@@ -136,18 +163,21 @@ Array.prototype.generate = function (passArgs = false) {
 		if (passArgs)
 			for (const task of arr) {
 				if (res === undefined)
-					res = task.make(...wrapInArr(yield));
-				else if (isPromise(res))
-					res = new Promise((resolve, reject) => {
-						res.then(
-							(trueRes) => {
-								resolve(trueRes);
-							},
-							(err) => {
-								reject(err);
-							});
-					});
-				else
+					res = task.makeAnyway(...wrapInArr(yield));
+				else if (isPromise(res)) {
+					const args = yield res;
+
+					res = res.then(
+						(nextRes) => {
+							if (nextRes === undefined)
+								return task.makeAnyway(...wrapInArr(args));
+
+							return task.makeAnyway(nextRes, ...wrapInArr(args));
+						},
+						(err) => {
+							throw err;
+						});
+				} else
 					res = task.makeAnyway(res, ...wrapInArr(yield res));
 			}
 		else

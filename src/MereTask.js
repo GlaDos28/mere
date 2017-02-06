@@ -17,6 +17,7 @@ const
 	getArgNum             = require("./util/getArgNum"),
 	getFunctionFormalArgs = require("./util/getFunctionFormalArgs"),
 	isPromise             = require("./util/isPromise"),
+	markArgs              = require("./util/markArgs"),
 	preProcess            = require("./util/preProcess"),
 	transformArgs         = require("./util/transformArgs"),
 	config                = require("./configuration");
@@ -27,13 +28,32 @@ const
  * The task that can be executed.
  *
  * @property {MereTask} task link to itself
+ * @property {MereTask} frozenTask 'frozen' link to itself (returns itself when executed)
  * @property {Function} func executive function
  * @property {Array<String>} formalArgs formal arguments
  * @property {Object} memo memoization data
  */
 class MereTask {
 	constructor (func, formalArgs) {
-		this.task       = this;
+		this.__defineGetter__("task",        () => this);
+		this.__defineGetter__("frozenTask",  () => new MereTask(() => this, []));
+		this.__defineGetter__("promiseTask", () => new MereTask((...argsP) =>
+			new Promise((resolve, reject) => {
+				try {
+					resolve(execFunc(this, ...argsP));
+				} catch (err) {
+					reject(err);
+				}
+			}), formalArgs));
+		this.__defineGetter__("deadTask",    () => new MereTask((...args) => {
+			const res = execFunc(this, ...args);
+
+			if (isPromise(res))
+				return res.then(() => {});
+
+			return undefined;
+		}, formalArgs));
+
 		this.func       = func;
 		this.formalArgs = formalArgs || getFunctionFormalArgs(func);
 		this.memo       = null; /* null means no memo (by default) */
@@ -42,7 +62,7 @@ class MereTask {
 	make (...args) {
 		args = preProcess(this, args);
 
-		const res = execFunc(this, ...args);
+		const res = execFunc(this, ...markArgs(args));
 
 		if (!config.config.isMakeReturnPromiseAllowed() && res instanceof Promise)
 			throw new Error("make() should not return a promise");
@@ -51,7 +71,7 @@ class MereTask {
 	}
 
 	makeAnyway (...args) {
-		return execFunc(this, ...preProcess(this, args));
+		return execFunc(this, ...markArgs(preProcess(this, args)));
 	}
 
 	promise (...args) {
@@ -59,7 +79,7 @@ class MereTask {
 
 		return new Promise((resolve, reject) => {
 			try {
-				resolve(execFunc(this, ...args));
+				resolve(execFunc(this, ...markArgs(args)));
 			} catch (err) {
 				reject(err);
 			}
@@ -67,11 +87,12 @@ class MereTask {
 	}
 
 	with (...args) {
-		const
-			trueArgs     = getArgDict(this.formalArgs, args),
-			formalArgNum = getArgNum(this);
+		const formalArgNum = getArgNum(this);
+		let   trueArgs     = getArgDict(this.formalArgs, args);
 
 		if (trueArgs !== null) {
+			trueArgs = markArgs(trueArgs);
+
 			if (formalArgNum.hasRest && formalArgNum.num === 0)
 				return new MereTask(this.func.bind(undefined, ...transformArgs(trueArgs)), this.formalArgs);
 
@@ -80,7 +101,7 @@ class MereTask {
 				skipArgNames = [];
 
 			for (let i = 0; i < formalArgNum.num; i += 1)
-				if (trueArgs[i] === undefined) {
+				if (trueArgs[i] === undefined || trueArgs[i].obj === undefined) {
 					skipArgInds.push(i);
 					skipArgNames.push(this.formalArgs[i]);
 				}
@@ -105,6 +126,8 @@ class MereTask {
 				skipArgNames
 			);
 		}
+
+		args = markArgs(args);
 
 		if (formalArgNum.hasRest && formalArgNum.num === 0) {
 			return new MereTask(this.func.bind(undefined, ...transformArgs(args)), this.formalArgs);
@@ -139,6 +162,8 @@ class MereTask {
 			ensureArgNum(secondArgs.length + 1, getArgNum(trueTask));
 		}
 
+		secondArgs = markArgs(secondArgs);
+
 		return new MereTask((...args) => {
 			const firstRes = execFunc(this, ...args);
 
@@ -148,7 +173,7 @@ class MereTask {
 						(firstTrueRes) => {
 							resolve(firstTrueRes === undefined
 								? execFunc(trueTask, ...secondArgs)
-								: execFunc(trueTask, firstTrueRes, ...secondArgs));
+								: execFunc(trueTask, ...markArgs([firstTrueRes]), ...secondArgs));
 						},
 						(err) => {
 							reject(err);
@@ -157,7 +182,7 @@ class MereTask {
 
 			return firstRes === undefined
 					? execFunc(trueTask, ...secondArgs)
-					: execFunc(trueTask, firstRes, ...secondArgs);
+					: execFunc(trueTask, ...markArgs([firstRes]), ...secondArgs);
 		},
 			this.formalArgs
 		);
@@ -166,8 +191,6 @@ class MereTask {
 	memoize () {
 		if (this.memo === null)
 			this.memo = {};
-
-		return this;
 	}
 }
 

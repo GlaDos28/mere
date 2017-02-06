@@ -14,6 +14,12 @@
  */
 const delimiters = [" ", ",", "\n", "\t"];
 
+const
+	commentIn  = "/*",
+	commentOut = "*/";
+
+/* eslint-disable max-statements, no-continue */
+
 /**
  * Returns formal arguments of the given function.
  * If function has 'rest' argument, then there is null value put in the end of the result array.
@@ -37,6 +43,17 @@ exports = module.exports = (func) => {
 				i = -1;
 			}
 
+		if (funcStr.startsWith(commentIn, ind)) {
+			ind += commentIn.length;
+
+			while (!funcStr.startsWith(commentOut, ind))
+				ind += 1;
+
+			ind += commentOut.length;
+
+			continue;
+		}
+
 		if (funcStr.charAt(ind) === ")") {
 			if (hasRest)
 				args.push(null);
@@ -54,6 +71,20 @@ exports = module.exports = (func) => {
 				arg += funcStr.charAt(ind);
 
 				ind += 1;
+
+				if (funcStr.startsWith(commentIn, ind)) {
+
+
+					ind += commentIn.length;
+
+					while (!funcStr.startsWith(commentOut, ind))
+						ind += 1;
+
+					ind += commentOut.length;
+
+					args.push(arg);
+					break;
+				}
 
 				if (funcStr.charAt(ind) === ")") {
 					args.push(arg);

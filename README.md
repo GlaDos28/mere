@@ -90,10 +90,18 @@ i.e `newTask` takes arguments for the first task and after takes the result (if 
 
 ##### Put one task as the argument for another one
 
+The code below will execute the task given as an argument:
+
 ```javascript
 const res = "task with one arg".make("second task name".task); /* if second task has no arguments */
 
 const res = "task with one arg".make("second task name".with(arg1, arg2, ...)); /* otherwise */
+```
+
+If it is necessary to give a task as argument without execution (as is):
+
+```javascript
+const res = "task with one arg".make("second task name".frozenTask);
 ```
 
 ##### Try interesting combinations
@@ -120,6 +128,9 @@ That one is stupid, but You will do it better!
 /* and even task arrays in task arrays! */
 ["task name 1", ["task name 2"], "task name 3"].make();
 ```
+
+Note that task arrays have methods ```.then_()``` and ```.with()``` that are corresponding to
+```.then()``` and ```.with()``` respectively.
 
 ##### Wrap task array into a generator
 
@@ -210,6 +221,23 @@ console.log("sum".make(2, 3));
     (error) => {
 		console.log("That is impossible!");
     });
+```
+
+##### Checking on being a task
+
+```javascript
+require("mere");
+
+"is task".bind((obj) => {
+	if (obj && obj.constructor && obj.constructor.name === "MereTask") /* MereTask - class of all tasks */
+		return true;
+
+	return false;
+});
+"test task".bind(() => {});
+
+console.log("is task".make("test task".task));       /* false, because 'test task' result will be put instead */
+console.log("is task".make("test task".frozenTask)); /* true, because frozen tasks will not being executed */
 ```
 
 ##### Fibonacci with memoization
@@ -378,7 +406,3 @@ require("mere");
 ```
 
 Because of its inanity.
-
-### Future releases
-
-- memorization control methods.

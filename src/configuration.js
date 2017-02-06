@@ -67,14 +67,26 @@ class MereConfiguration {
 	}
 
 	setArgCheck (type) {
-		if (type > ARG_CHECK_ENUM.MUST_EQUAL)
-			throw new Error(`invalid argument checking type: ${type} (use mere.ARG_CHECK_ENUM)`);
-
-		if (type < ARG_CHECK_ENUM.NOT_LESS)
+		switch (type) {
+		case ARG_CHECK_ENUM.NO_CHECK:
 			this.lessArgAllowed = true;
-
-		if (type === ARG_CHECK_ENUM.NO_CHECK)
 			this.moreArgAllowed = true;
+			break;
+		case ARG_CHECK_ENUM.NOT_LESS:
+			this.lessArgAllowed = false;
+			this.moreArgAllowed = true;
+			break;
+		case ARG_CHECK_ENUM.NOT_MORE:
+			this.lessArgAllowed = true;
+			this.moreArgAllowed = false;
+			break;
+		case ARG_CHECK_ENUM.MUST_EQUAL:
+			this.lessArgAllowed = false;
+			this.moreArgAllowed = false;
+			break;
+		default:
+			throw new Error(`invalid argument checking type: ${type} (use mere.ARG_CHECK_ENUM)`);
+		}
 	}
 
 	isMakeReturnPromiseAllowed () {
