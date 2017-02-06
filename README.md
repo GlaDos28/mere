@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/GlaDos28/mere.svg?branch=master)](http://travis-ci.org/mochajs/mocha)
 [![Known Vulnerabilities](https://snyk.io/test/github/glados28/mere/badge.svg)](https://snyk.io/test/github/glados28/mere)
 
-# Mere - library for JavaScript [![clipboard.png](https://s30.postimg.org/wvb3yhfr5/clipboard.png)]() [![list.png](https://s24.postimg.org/r15oe6nfp/list.png)]()
+# Mere - library for JavaScript <img src="https://s30.postimg.org/wvb3yhfr5/clipboard.png"> <img src="https://s24.postimg.org/r15oe6nfp/list.png">
 
 Library that allows to bind functions to the string-formed tasks (JavaScript's Strings) and then execute functions through their related tasks.
 Together with this, a collection of associated tools is attached. 
@@ -197,7 +197,7 @@ All tasks have four special properties accessed by `<task>.<property>`:
 
 ##### Additional options / Mere configuring
 
-[![settings.png](https://s30.postimg.org/qm15vd6k1/settings.png)]()
+<img src="https://s30.postimg.org/qm15vd6k1/settings.png">
 
 ```javascript
 const mere = require("mere");
