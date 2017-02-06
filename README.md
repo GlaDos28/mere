@@ -1,4 +1,4 @@
-# "Mere" - library for JavaScript
+# Mere - library for JavaScript
 
 Library that allows to bind functions to the string-formed tasks (JavaScript's Strings) and then execute functions through their related tasks.
 Together with this, a collection of associated tools is attached. 
