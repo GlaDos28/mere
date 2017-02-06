@@ -12,11 +12,12 @@ npm i mere --save
 ### Usage
 
 In our context tasks are mappings { string : function } or their derivatives.
-The world "derivative" means all task combinations that can be achived through using such methods as  
+The world "derivative" means all task combinations that can be achieved through using such methods as  
     "task".task  
     "task".with(...)  
     "task".then(...)  
     [task1, task2, ...]  
+    and some other
 
 ##### Require Mere library
 
@@ -164,6 +165,32 @@ task.memoize();
 
 Application will save the result for each argument combination. Note that responsibility of task memoization is laid on user.
 Excess arguments are removed when checking memoization data, as well as missing arguments are put undefined.
+
+##### Four properties
+
+All tasks have four special properties accessed by `<task>.<property>`:
+
+1. `.task` - return the task itself. Useful in such case as `"...".task` to get the binded task.
+2. `.frozenTask` - return new task which returns the parent task. Useful when want to put a task as an argument:  
+```javascript
+"task 1".make("task 2");            // will put "task 2" as is, as a string argument 
+"task 1".make("task 2".task);       // will execute "task 2" with no args and put its result (if "task 2" returns a promise, then "task 1" will return a promise, too, but be careful with make() method for this
+"task 1".make("task 2".frozenTask); // will put "task 2".task as the argument, without executing it
+```
+3. `.promiseTask` - wraps potential task result into a promise, that is why after this task will return only promises.
+4. `.deadTask` - forces the task not to return anything (in case of promise - return empty in `resolve()` or an error in `reject()`). This is useful when the task returns some extra data, for instance
+```javascript
+"put data".bind((key, value) => {
+	const prevData = dataContainer[key];
+	
+	dataContainer[key] = value;
+	return prevData; /* returns the previous data binded to the key. Not necessary in most cases */
+});
+
+/* .deadTask forces not to pass the result into the next task as the first argument */
+"put data".deadTask.then("...", arg1, ...).make(...);
+
+```
 
 ##### Additional options
 
