@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/GlaDos28/mere.svg?branch=master)](http://travis-ci.org/mochajs/mocha)
+[![Known Vulnerabilities](https://snyk.io/test/github/glados28/mere/badge.svg)](https://snyk.io/test/github/glados28/mere)
 
 # Mere - library for JavaScript
 
